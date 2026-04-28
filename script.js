@@ -75,6 +75,69 @@ function renderInputs() {
     confirmationButton.style.opacity = inputs.length < MIN_INPUTS ? 0.25 : 1;
 }
 
+async function renderQuestion() {
+    const questionElement = document.getElementById("question");
+    questionElement.innerHTML = `
+        <button id="option_a_button"></button>
+        <button id="option_b_button"></button>
+    `;   
+    const sortResult = await interactiveSort();
+    alert(`Sorted result: ${sortResult.join(" > ")}`);
+}
+
+async function interactiveSort() {
+    const sorted = [];
+    for(const item of inputs) {
+        let left = 0;
+        let right = sorted.length;
+        while(left < right) {
+            const mid = Math.floor((left + right) / 2);
+            const prefersItem = await compareCached(item, sorted[mid]);
+            if(prefersItem) right = mid;
+            else left = mid + 1;
+        }
+        sorted.splice(left, 0, item);
+    }
+    return sorted;
+}
+
+const cache = new Map();
+
+async function compareCached(a, b) {
+    const key = `${a}|${b}`;
+    const reverseKey = `${b}|${a}`;
+
+    if(cache.has(key)) return cache.get(key);
+    if(cache.has(reverseKey)) return !cache.get(reverseKey);
+
+    const result = await compare(a, b);
+    cache.set(key, result);
+    return result;
+}
+
+function compare(a, b) {
+    return new Promise(resolve => {
+        const buttonA = document.getElementById("option_a_button");
+        const buttonB = document.getElementById("option_b_button");
+        buttonA.textContent = a;
+        buttonB.textContent = b;
+        const handleA = () => {
+            cleanup();
+            resolve(true);
+        };
+        const handleB = () => {
+            cleanup();
+            resolve(false);
+        };
+        function cleanup() {
+            buttonA.removeEventListener("click", handleA);
+            buttonB.removeEventListener("click", handleB);
+        }
+        buttonA.addEventListener("click", handleA);
+        buttonB.addEventListener("click", handleB);
+    });
+}
+
 function updateScreen() {
     const content = document.getElementById("page_content");
     if(currentScreen == screens.INPUT_FORM) {
@@ -83,6 +146,12 @@ function updateScreen() {
             <div id="inputs"></div>
         `;
         renderFormFields();
+    } else if(currentScreen == screens.RANKING) {
+        content.innerHTML = `
+            <h2>Which do you prefer?</h2>
+            <div id="question"></div>
+        `;
+        renderQuestion();
     } else {
         inputs = [];
         content.innerHTML = "";
