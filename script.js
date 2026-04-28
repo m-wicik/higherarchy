@@ -1,15 +1,77 @@
-const MIN_INPUTS = 2;
-
+const cache = new Map();
 const screens = {
   INPUT_FORM: "input_form",
   RANKING: "ranking",
   RESULT: "result"
 };
 
+const MIN_INPUTS = 2;
+
 let currentScreen = screens.INPUT_FORM;
 let inputs = [];
+let sortResult = null;
 
 updateScreen();
+
+function attemptSubmitInput() {
+    if(inputs.length < MIN_INPUTS) {
+            alert("Input at least 2 entries");
+        } else {
+            currentScreen = screens.RANKING;
+            updateScreen();
+        }
+}
+
+function compare(a, b) {
+    return new Promise(resolve => {
+        const buttonA = document.getElementById("option_a_button");
+        const buttonB = document.getElementById("option_b_button");
+        buttonA.textContent = a;
+        buttonB.textContent = b;
+        const handleA = () => {
+            cleanup();
+            resolve(true);
+        };
+        const handleB = () => {
+            cleanup();
+            resolve(false);
+        };
+        function cleanup() {
+            buttonA.removeEventListener("click", handleA);
+            buttonB.removeEventListener("click", handleB);
+        }
+        buttonA.addEventListener("click", handleA);
+        buttonB.addEventListener("click", handleB);
+    });
+}
+
+async function compareCached(a, b) {
+    const key = `${a}|${b}`;
+    const reverseKey = `${b}|${a}`;
+
+    if(cache.has(key)) return cache.get(key);
+    if(cache.has(reverseKey)) return !cache.get(reverseKey);
+
+    const result = await compare(a, b);
+    cache.set(key, result);
+    return result;
+}
+
+async function interactiveSort() {
+    const sorted = [];
+    for(const item of inputs) {
+        let left = 0;
+        let right = sorted.length;
+        while(left < right) {
+            const mid = Math.floor((left + right) / 2);
+            const prefersItem = await compareCached(item, sorted[mid]);
+            if(prefersItem) right = mid;
+            else left = mid + 1;
+        }
+        sorted.splice(left, 0, item);
+    }
+    return sorted;
+}
 
 function renderFormFields() {
     const inputFields = document.getElementById("inputs");
@@ -26,8 +88,8 @@ function renderFormFields() {
             e.preventDefault();
 
             const entry = input.value.trim();
-            if(entry == "") return;
-            if(!inputs.includes(entry)) inputs.push(entry);
+            if(entry == "") attemptSubmitInput();
+            else if(!inputs.includes(entry)) inputs.push(entry);
 
             input.value = "";
             renderInputs();
@@ -35,14 +97,7 @@ function renderFormFields() {
     });
 
     const confirmationButton = document.getElementById("confirm_input_button");
-    confirmationButton.onclick = () => {
-        if(inputs.length < MIN_INPUTS) {
-            alert("Input at least 2 entries");
-        } else {
-            currentScreen = screens.RANKING;
-            updateScreen();
-        }
-    };
+    confirmationButton.onclick = () => attemptSubmitInput;
 }
 
 function renderInputs() {
@@ -80,62 +135,25 @@ async function renderQuestion() {
     questionElement.innerHTML = `
         <button id="option_a_button"></button>
         <button id="option_b_button"></button>
-    `;   
-    const sortResult = await interactiveSort();
-    alert(`Sorted result: ${sortResult.join(" > ")}`);
+    `;
+    sortResult = await interactiveSort();
+    currentScreen = screens.RESULT;
+    updateScreen();
 }
 
-async function interactiveSort() {
-    const sorted = [];
-    for(const item of inputs) {
-        let left = 0;
-        let right = sorted.length;
-        while(left < right) {
-            const mid = Math.floor((left + right) / 2);
-            const prefersItem = await compareCached(item, sorted[mid]);
-            if(prefersItem) right = mid;
-            else left = mid + 1;
-        }
-        sorted.splice(left, 0, item);
-    }
-    return sorted;
-}
-
-const cache = new Map();
-
-async function compareCached(a, b) {
-    const key = `${a}|${b}`;
-    const reverseKey = `${b}|${a}`;
-
-    if(cache.has(key)) return cache.get(key);
-    if(cache.has(reverseKey)) return !cache.get(reverseKey);
-
-    const result = await compare(a, b);
-    cache.set(key, result);
-    return result;
-}
-
-function compare(a, b) {
-    return new Promise(resolve => {
-        const buttonA = document.getElementById("option_a_button");
-        const buttonB = document.getElementById("option_b_button");
-        buttonA.textContent = a;
-        buttonB.textContent = b;
-        const handleA = () => {
-            cleanup();
-            resolve(true);
-        };
-        const handleB = () => {
-            cleanup();
-            resolve(false);
-        };
-        function cleanup() {
-            buttonA.removeEventListener("click", handleA);
-            buttonB.removeEventListener("click", handleB);
-        }
-        buttonA.addEventListener("click", handleA);
-        buttonB.addEventListener("click", handleB);
-    });
+function renderResult() {
+    const resultElement = document.getElementById("result");
+    resultElement.innerHTML = `
+        <ol>${sortResult.map(item => `<li>${item}</li>`).join("")}</ol>
+        <button id="restart_button">Restart</button>
+    `;
+    const restartButton = document.getElementById("restart_button");
+    restartButton.onclick = () => {
+        inputs = [];
+        sortResult = null;
+        currentScreen = screens.INPUT_FORM;
+        updateScreen();
+    };
 }
 
 function updateScreen() {
@@ -152,8 +170,15 @@ function updateScreen() {
             <div id="question"></div>
         `;
         renderQuestion();
+    } else if(currentScreen == screens.RESULT) {
+        content.innerHTML = `
+            <h2>Results</h2>
+            <div id="result"></div>
+        `;
+        renderResult();
     } else {
         inputs = [];
+        sortResult = null;
         content.innerHTML = "";
     }
 }
