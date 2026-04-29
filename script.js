@@ -15,11 +15,11 @@ updateScreen();
 
 function attemptSubmitInput() {
     if(inputs.length < MIN_INPUTS) {
-            alert("Input at least 2 entries");
-        } else {
-            currentScreen = screens.RANKING;
-            updateScreen();
-        }
+        alert("Input at least 2 entries");
+    } else {
+        currentScreen = screens.RANKING;
+        updateScreen();
+    }
 }
 
 function compare(a, b) {
@@ -79,7 +79,7 @@ function renderFormFields() {
         <div id="inputted_entries" style="color: white"></div>
         <input class="user_input" id="input_fields"></input>
         <br/><br/>
-        <button id="confirm_input_button" style="opacity: 25%">Confirm</button>
+        <button id="confirm_input_button" style="opacity: 0.25">Confirm</button>
     `;
 
     const input = document.getElementById("input_fields");
@@ -97,7 +97,7 @@ function renderFormFields() {
     });
 
     const confirmationButton = document.getElementById("confirm_input_button");
-    confirmationButton.onclick = () => attemptSubmitInput;
+    confirmationButton.onclick = attemptSubmitInput;
 }
 
 function renderInputs() {
