@@ -10,6 +10,7 @@ const MIN_INPUTS = 2;
 let currentScreen = screens.INPUT_FORM;
 let inputs = [];
 let sortResult = null;
+let randomizeOrder = true;
 
 updateScreen();
 
@@ -58,15 +59,16 @@ async function compareCached(a, b) {
 }
 
 async function interactiveSort() {
+    if(randomizeOrder) inputs = shuffle(inputs);
     const sorted = [];
     for(const item of inputs) {
         let left = 0;
         let right = sorted.length;
         while(left < right) {
             const mid = Math.floor((left + right) / 2);
-            const prefersItem = await compareCached(item, sorted[mid]);
-            if(prefersItem) right = mid;
-            else left = mid + 1;
+            const prefersItem = await compareCached(sorted[mid], item);
+            if(prefersItem) left = mid + 1;
+            else right = mid;
         }
         sorted.splice(left, 0, item);
     }
@@ -74,6 +76,12 @@ async function interactiveSort() {
 }
 
 function renderFormFields() {
+    const settingFields = document.getElementById("settings");
+    settingFields.innerHTML = `
+        Randomize Order:
+        <button id="randomize_order_button">${randomizeOrder ? "on" : "off"}</button>
+    `;
+
     const inputFields = document.getElementById("inputs");
     inputFields.innerHTML = `
         <div id="inputted_entries" style="color: white"></div>
@@ -98,6 +106,12 @@ function renderFormFields() {
 
     const confirmationButton = document.getElementById("confirm_input_button");
     confirmationButton.onclick = attemptSubmitInput;
+
+    const randomizeOrderButton = document.getElementById("randomize_order_button");
+    randomizeOrderButton.onclick = () => {
+        randomizeOrder = !randomizeOrder;
+        randomizeOrderButton.innerText = randomizeOrder ? "on" : "off";
+    };
 }
 
 function renderInputs() {
@@ -152,14 +166,26 @@ function renderResult() {
         inputs = [];
         sortResult = null;
         currentScreen = screens.INPUT_FORM;
+        cache.clear();
         updateScreen();
     };
+}
+
+function shuffle(array) {
+    const copy = [...array];
+    for(let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
 }
 
 function updateScreen() {
     const content = document.getElementById("page_content");
     if(currentScreen == screens.INPUT_FORM) {
         content.innerHTML = `
+            <h2>Settings</h2>
+            <div id="settings"></div>
             <h2>Inputs</h2>
             <div id="inputs"></div>
         `;
