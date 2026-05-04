@@ -1,5 +1,6 @@
 const cache = new Map();
 const screens = {
+  LANDING_PAGE: "landing_page",
   INPUT_FORM: "input_form",
   RANKING: "ranking",
   RESULT: "result"
@@ -7,7 +8,7 @@ const screens = {
 
 const MIN_INPUTS = 2;
 
-let currentScreen = screens.INPUT_FORM;
+let currentScreen = screens.LANDING_PAGE;
 let inputs = [];
 let sortResult = null;
 let randomizeOrder = true;
@@ -182,7 +183,20 @@ function shuffle(array) {
 
 function updateScreen() {
     const content = document.getElementById("page_content");
-    if(currentScreen == screens.INPUT_FORM) {
+    if(currentScreen == screens.LANDING_PAGE) {
+        content.innerHTML = `
+            <div style="text-align: center">
+                <button id="login_button">Log In</button><br/><br/>
+                <button id="signup_button">Sign Up</button><br/><br/>
+                <button id="guest_button">Continue as Guest</button>
+            </div>
+        `;
+        const guestButton = document.getElementById("guest_button");
+        guestButton.onclick = () => {
+            currentScreen = screens.INPUT_FORM;
+            updateScreen();
+        }
+    } else if(currentScreen == screens.INPUT_FORM) {
         content.innerHTML = `
             <h2>Settings</h2>
             <div id="settings"></div>
