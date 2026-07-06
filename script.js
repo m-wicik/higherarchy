@@ -1,6 +1,18 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 const cache = new Map();
 const screens = {
   LANDING_PAGE: "landing_page",
+  LOGIN: "login",
+  SIGNUP: "signup",
+  HOME: "home",
   INPUT_FORM: "input_form",
   RANKING: "ranking",
   RESULT: "result"
@@ -75,6 +87,23 @@ async function interactiveSort() {
     }
     return sorted;
 }
+
+function login(email, password) {
+    signInWithEmailAndPassword(auth, email, password)
+        .then(userCredential => {
+            console.log("Logged in:", userCredential.user.uid);
+        })
+        .catch(error => {
+            console.error(error.message);
+            window.alert("Could not log in using those credentials.");
+        });
+}
+
+onAuthStateChanged(auth, (user) => {
+    if(user) currentScreen = screens.HOME;
+    else currentScreen = screens.LANDING_PAGE;
+    updateScreen();
+});
 
 function renderFormFields() {
     const settingFields = document.getElementById("settings");
@@ -181,8 +210,20 @@ function shuffle(array) {
     return copy;
 }
 
+function signup(email, password) {
+    createUserWithEmailAndPassword(auth, email, password)
+        .then(userCredential => {
+            console.log("User created:", userCredential.user.uid);
+        })
+        .catch(error => {
+            console.error(error.message);
+        });
+}
+
 function updateScreen() {
     const content = document.getElementById("page_content");
+    const bottomMenu = document.getElementById("bottom_menu");
+    bottomMenu.innerHTML = "";
     if(currentScreen == screens.LANDING_PAGE) {
         content.innerHTML = `
             <div style="text-align: center">
@@ -191,10 +232,79 @@ function updateScreen() {
                 <button id="guest_button">Continue as Guest</button>
             </div>
         `;
-        const guestButton = document.getElementById("guest_button");
-        guestButton.onclick = () => {
+        document.getElementById("login_button").onclick = () => {
+            currentScreen = screens.LOGIN;
+            updateScreen();
+        }
+        document.getElementById("signup_button").onclick = () => {
+            currentScreen = screens.SIGNUP;
+            updateScreen();
+        }
+        document.getElementById("guest_button").onclick = () => {
             currentScreen = screens.INPUT_FORM;
             updateScreen();
+        }
+    } else if(currentScreen == screens.LOGIN) {
+        content.innerHTML = `
+            <div style="text-align: center">
+                Email:<br><input class="user_input" id="email_input"></input><br><br>
+                Password:<br><input class="user_input" id="password_input"></input><br><br>
+                <button id="login_button">Log In</button><br><br>
+                <button id="go_back_button">Back</button>
+            </div>
+        `;
+        document.getElementById("login_button").onclick = () => {
+            const email = document.getElementById("email_input").value;
+            const password = document.getElementById("password_input").value;
+            login(email, password);
+        };
+        document.getElementById("go_back_button").onclick = () => {
+            currentScreen = screens.LANDING_PAGE;
+            updateScreen();
+        }
+    } else if(currentScreen == screens.SIGNUP) {
+        content.innerHTML = `
+            <div style="text-align: center">
+                Email:<br><input class="user_input" id="email_input"></input><br><br>
+                Password:<br><input class="user_input" id="password_input"></input><br><br>
+                <button id="signup_button">Sign Up</button><br><br>
+                <button id="go_back_button">Back</button>
+            </div>
+        `;
+        document.getElementById("signup_button").onclick = () => {
+            const email = document.getElementById("email_input").value;
+            const password = document.getElementById("password_input").value;
+            signup(email, password);
+        };
+        document.getElementById("go_back_button").onclick = () => {
+            currentScreen = screens.LANDING_PAGE;
+            updateScreen();
+        }
+    } else if(currentScreen == screens.HOME) {
+        content.innerHTML = `
+            <button id="new_button">New Ranking</button>
+            <button id="archives_button">Previous Rankings</button>
+        `;
+        if(auth.currentUser) {
+            bottomMenu.innerHTML = `
+                <button id="logout_button">Log Out</button><br><br>
+            `;
+            document.getElementById("logout_button").onclick = () => {
+                signOut(auth);
+            };
+        } else {
+            bottomMenu.innerHTML = `
+                <button id="login_button">Log In</button><br><br>
+                <button id="signup_button">Sign Up</button><br><br>
+            `;
+            document.getElementById("login_button").onclick = () => {
+                currentScreen = screens.LOGIN;
+                updateScreen();
+            };
+            document.getElementById("signup_button").onclick = () => {
+                currentScreen = screens.SIGNUP;
+                updateScreen();
+            };
         }
     } else if(currentScreen == screens.INPUT_FORM) {
         content.innerHTML = `
