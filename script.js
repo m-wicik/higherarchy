@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, getDocs, doc, deleteDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, deleteDoc, serverTimestamp, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -73,6 +73,16 @@ async function compareCached(a, b) {
     return result;
 }
 
+async function deleteRanking(id) {
+    try {
+        await deleteDoc(doc(db, "rankings", id));
+        console.log("Ranking deleted");
+        renderArchive();
+    } catch(error) {
+        console.error("Error deleting ranking:", error);
+    }
+}
+
 async function getRankings() {
     const rankings = [];
 
@@ -133,6 +143,22 @@ onAuthStateChanged(auth, (user) => {
     updateScreen();
 });
 
+async function renameRanking(id, oldTitle) {
+    const newTitle = prompt("New ranking title:", oldTitle);
+
+    if(newTitle == null || newTitle.trim() == "") return;
+
+    try {
+        await updateDoc(doc(db, "rankings", id), {
+            title: newTitle.trim()
+        });
+        console.log("Ranking renamed");
+        renderArchive();
+    } catch(error) {
+        console.error("Error renaming ranking:", error);
+    }
+}
+
 async function renderArchive() {
     const content = document.getElementById("page_content");
 
@@ -158,13 +184,38 @@ async function renderArchive() {
 
     archiveList.innerHTML = rankings.map(ranking => `
         <div>
-            <h3>${ranking.title}</h3>
+            <h3>
+                ${ranking.title}
+                <button class="rename_button" data-id="${ranking.id}" data-title="${ranking.title}" title="Rename">
+                    <i class="fa-solid fa-pencil"></i>
+                </button>
+                <button class="delete_button" data-id="${ranking.id}" title="Delete">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </h3>
             <ol>
                 ${ranking.items.map(item => `<li>${item}</li>`).join("")}
             </ol>
         </div>
         <hr>
     `).join("");
+
+    document.querySelectorAll(".rename_button").forEach(button => {
+        button.onclick = () => {
+            renameRanking(
+                button.dataset.id,
+                button.dataset.title
+            );
+        };
+    });
+
+    document.querySelectorAll(".delete_button").forEach(button => {
+        button.onclick = () => {
+            if(confirm("Delete this ranking?")) {
+                deleteRanking(button.dataset.id);
+            }
+        };
+    });
 }
 
 function renderFormFields() {
@@ -181,7 +232,8 @@ function renderFormFields() {
         <div id="inputted_entries" style="color: white"></div>
         <input class="user_input" id="input_fields"></input>
         <br/><br/>
-        <button id="confirm_input_button" style="opacity: 0.25">Confirm</button>
+        <button id="confirm_input_button" disabled>Confirm</button>
+        <button id="back_button"">Back</button>
     `;
 
     const input = document.getElementById("input_fields");
@@ -208,6 +260,11 @@ function renderFormFields() {
 
     const confirmationButton = document.getElementById("confirm_input_button");
     confirmationButton.onclick = attemptSubmitInput;
+
+    document.getElementById("back_button").onclick = () => {
+        currentScreen = screens.HOME;
+        updateScreen();
+    };
 
     const randomizeOrderButton = document.getElementById("randomize_order_button");
     randomizeOrderButton.onclick = () => {
@@ -244,7 +301,7 @@ function renderInputs() {
     }
     
     const confirmationButton = document.getElementById("confirm_input_button");
-    confirmationButton.style.opacity = inputs.length < MIN_INPUTS ? 0.25 : 1;
+    confirmationButton.disabled = inputs.length < MIN_INPUTS;
 }
 
 async function renderQuestion() {
