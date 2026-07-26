@@ -22,10 +22,25 @@ body {
 }
 
 button {
-    background-color: black;
+    background-color: transparent;
     border: 2px solid white;
     border-radius: 4px;
     color: white;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
+}
+
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px gray;
+    background: gray;
+}
+
+button:active {
+    transform: scale(0.98);
 }
 
 h1 {
