@@ -27,7 +27,15 @@ let sortResult = null;
 let randomizeOrder = true;
 let rankingTitle = "";
 
-updateScreen();
+window.addEventListener("DOMContentLoaded", () => {
+    updateScreen();
+
+    onAuthStateChanged(auth, (user) => {
+        if(user) currentScreen = screens.HOME;
+        else currentScreen = screens.LANDING_PAGE;
+        updateScreen();
+    });
+});
 
 function attemptSubmitInput() {
     if(inputs.length < MIN_INPUTS) {
