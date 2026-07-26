@@ -27,6 +27,8 @@ let sortResult = null;
 let randomizeOrder = true;
 let rankingTitle = "";
 
+updateScreen();
+
 function attemptSubmitInput() {
     if(inputs.length < MIN_INPUTS) {
         alert("Input at least 2 entries");
