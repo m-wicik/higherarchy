@@ -174,7 +174,7 @@ async function renderArchive() {
 
     content.innerHTML = `
         <h2>Previous Rankings</h2>
-        <div id="archive_list">Loading...</div><br>
+        <div id="archive_list" class="archive_list">Loading...</div><br>
         <button id="back_button">Back</button>
     `;
 
@@ -193,19 +193,37 @@ async function renderArchive() {
     }
 
     archiveList.innerHTML = rankings.map(ranking => `
-        <div>
-            <h3>
-                ${ranking.title}
+        <div class="ranking_entry">
+            <h3 class="ranking_title" data-id="${ranking.id}">
+                <span>▶ ${ranking.title}</span>
+
                 <button class="rename_button" data-id="${ranking.id}" data-title="${ranking.title}" title="Rename">
                     <i class="fa-solid fa-pencil"></i>
                 </button>
+
                 <button class="delete_button" data-id="${ranking.id}" title="Delete">
                     <i class="fa-solid fa-trash"></i>
                 </button>
+
+                <button class="rerank_button" data-id="${ranking.id}" title="Re-rank">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
             </h3>
-            <ol>
-                ${ranking.items.map(item => `<li>${item}</li>`).join("")}
-            </ol>
+            <small class="ranking_date">
+                ${ranking.createdAt 
+                    ? ranking.createdAt.toDate().toLocaleDateString("en-CA", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric"
+                    })
+                    : "Unknown date"}
+            </small>
+
+            <div class="ranking_details" id="details_${ranking.id}" style="display:none;">
+                <ol>
+                    ${ranking.items.map(item => `<li>${item}</li>`).join("")}
+                </ol>
+            </div>
         </div>
         <hr>
     `).join("");
@@ -223,6 +241,32 @@ async function renderArchive() {
         button.onclick = () => {
             if(confirm("Delete this ranking?")) {
                 deleteRanking(button.dataset.id);
+            }
+        };
+    });
+
+    document.querySelectorAll(".rerank_button").forEach(button => {
+        button.onclick = () => {
+            rerankRanking(button.dataset.id);
+        };
+    });
+
+    document.querySelectorAll(".ranking_title").forEach(title => {
+        title.onclick = (event) => {
+            // prevent clicking buttons from toggling
+            if(event.target.closest("button")) return;
+
+            const id = title.dataset.id;
+            const details = document.getElementById(`details_${id}`);
+
+            if(details.style.display === "none") {
+                details.style.display = "block";
+                title.querySelector("span").textContent =
+                    title.querySelector("span").textContent.replace("▶", "▼");
+            } else {
+                details.style.display = "none";
+                title.querySelector("span").textContent =
+                    title.querySelector("span").textContent.replace("▼", "▶");
             }
         };
     });
@@ -272,7 +316,10 @@ function renderFormFields() {
     confirmationButton.onclick = attemptSubmitInput;
 
     document.getElementById("back_button").onclick = () => {
+        inputs = [];
+        sortResult = null;
         currentScreen = screens.HOME;
+        cache.clear();
         updateScreen();
     };
 
@@ -344,6 +391,23 @@ function renderResult() {
         currentScreen = screens.HOME;
         updateScreen();
     }
+}
+
+async function rerankRanking(id) {
+    const ranking = (await getRankings()).find(r => r.id == id);
+
+    if(!ranking) {
+        console.error("Ranking not found");
+        return;
+    }
+
+    inputs = [...ranking.items];
+    rankingTitle = ranking.title + " (Re-ranked)";
+    sortResult = null;
+    cache.clear();
+
+    currentScreen = screens.RANKING;
+    updateScreen();
 }
 
 async function saveRanking() {

@@ -1,3 +1,8 @@
+.archive_list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
 body {
     background-color: black;
     color: white;
@@ -51,4 +56,45 @@ button:disabled {
 h1 {
     font-weight: bold;
     text-align: center;
+}
+
+.ranking_date {
+    display: block;
+    color: #aaa;
+    font-size: 0.8rem;
+    margin-top: -10px;
+    margin-bottom: 10px;
+}
+
+.ranking_title {
+    cursor: pointer;
+    user-select: none;
+}
+
+.ranking_title button {
+    cursor: pointer;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e1e1e;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 10px;
+    border: 2px solid #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #666 #1e1e1e;
 }
